@@ -102,6 +102,10 @@
                 tbody.appendChild(tr);
             }
         }
+
+        // JS checks
+        console.assert(document.querySelector('#region-filter').tagName === 'SELECT', 'Region filter is not a select element');
+        console.assert(document.querySelector('#total-sales').dataset.region !== undefined, 'Total sales does not have a data-region attribute');
     </script>
 </body>
 </html>
