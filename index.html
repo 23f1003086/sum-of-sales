@@ -10,12 +10,18 @@
 <body>
     <div class="container mt-5">
         <h1>Sales Summary</h1>
-        <div id="total-sales" class="display-4"></div>
+        <div id="total-sales" class="display-4" data-region=""></div>
         <div id="total-currency" class="display-6">USD</div>
         <select id="currency-picker" class="form-select mt-3">
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
             <option value="GBP">GBP</option>
+        </select>
+        <select id="region-filter" class="form-select mt-3">
+            <option value="">All Regions</option>
+            <option value="North America">North America</option>
+            <option value="Europe">Europe</option>
+            <option value="Asia">Asia</option>
         </select>
         <table id="product-sales" class="table mt-4">
             <thead>
@@ -33,31 +39,26 @@
 
         let totalSales = 0;
         let exchangeRates = {};
+        let productSales = {};
 
         fetch('data.csv')
             .then(response => response.text())
             .then(data => {
                 const rows = data.split('\n').slice(1);
-                const productSales = {};
 
                 rows.forEach(row => {
                     const columns = row.split(',');
-                    if (columns.length > 1) {
+                    if (columns.length > 2) {
                         const product = columns[0].trim();
                         const sales = parseFloat(columns[1]) || 0;
+                        const region = columns[2].trim();
                         totalSales += sales;
-                        productSales[product] = (productSales[product] || 0) + sales;
+                        productSales[product] = { sales: (productSales[product]?.sales || 0) + sales, region: region };
                     }
                 });
 
-                document.querySelector('#total-sales').textContent = totalSales.toFixed(2);
-
-                const tbody = document.querySelector('#product-sales tbody');
-                for (const [product, sales] of Object.entries(productSales)) {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${product}</td><td>${sales.toFixed(2)}</td>`;
-                    tbody.appendChild(tr);
-                }
+                updateTotalSales();
+                populateProductTable();
             });
 
         fetch('rates.json')
@@ -68,6 +69,7 @@
             });
 
         document.querySelector('#currency-picker').addEventListener('change', updateCurrency);
+        document.querySelector('#region-filter').addEventListener('change', updateTotalSales);
 
         function updateCurrency() {
             const selectedCurrency = document.querySelector('#currency-picker').value;
@@ -75,6 +77,30 @@
             const convertedTotal = totalSales * rate;
             document.querySelector('#total-sales').textContent = convertedTotal.toFixed(2);
             document.querySelector('#total-currency').textContent = selectedCurrency;
+        }
+
+        function updateTotalSales() {
+            const selectedRegion = document.querySelector('#region-filter').value;
+            let filteredTotal = 0;
+
+            for (const [product, data] of Object.entries(productSales)) {
+                if (selectedRegion === "" || data.region === selectedRegion) {
+                    filteredTotal += data.sales;
+                }
+            }
+
+            document.querySelector('#total-sales').textContent = filteredTotal.toFixed(2);
+            document.querySelector('#total-sales').dataset.region = selectedRegion;
+        }
+
+        function populateProductTable() {
+            const tbody = document.querySelector('#product-sales tbody');
+            tbody.innerHTML = '';
+            for (const [product, data] of Object.entries(productSales)) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${product}</td><td>${data.sales.toFixed(2)}</td>`;
+                tbody.appendChild(tr);
+            }
         }
     </script>
 </body>
