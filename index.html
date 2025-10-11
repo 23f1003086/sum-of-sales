@@ -11,6 +11,12 @@
     <div class="container mt-5">
         <h1>Sales Summary</h1>
         <div id="total-sales" class="display-4"></div>
+        <div id="total-currency" class="display-6">USD</div>
+        <select id="currency-picker" class="form-select mt-3">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+        </select>
         <table id="product-sales" class="table mt-4">
             <thead>
                 <tr>
@@ -25,11 +31,13 @@
     <script>
         document.title = 'Sales Summary 42';
 
+        let totalSales = 0;
+        let exchangeRates = {};
+
         fetch('data.csv')
             .then(response => response.text())
             .then(data => {
                 const rows = data.split('\n').slice(1);
-                let totalSales = 0;
                 const productSales = {};
 
                 rows.forEach(row => {
@@ -51,6 +59,23 @@
                     tbody.appendChild(tr);
                 }
             });
+
+        fetch('rates.json')
+            .then(response => response.json())
+            .then(data => {
+                exchangeRates = data;
+                updateCurrency();
+            });
+
+        document.querySelector('#currency-picker').addEventListener('change', updateCurrency);
+
+        function updateCurrency() {
+            const selectedCurrency = document.querySelector('#currency-picker').value;
+            const rate = exchangeRates[selectedCurrency] || 1;
+            const convertedTotal = totalSales * rate;
+            document.querySelector('#total-sales').textContent = convertedTotal.toFixed(2);
+            document.querySelector('#total-currency').textContent = selectedCurrency;
+        }
     </script>
 </body>
 </html>
