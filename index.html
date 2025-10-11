@@ -89,7 +89,9 @@
                 }
             }
 
-            document.querySelector('#total-sales').textContent = filteredTotal.toFixed(2);
+            const selectedCurrency = document.querySelector('#currency-picker').value;
+            const rate = exchangeRates[selectedCurrency] || 1;
+            document.querySelector('#total-sales').textContent = (filteredTotal * rate).toFixed(2);
             document.querySelector('#total-sales').dataset.region = selectedRegion;
         }
 
@@ -104,6 +106,10 @@
         }
 
         // JS checks
+        console.assert(document.querySelectorAll('#product-sales tbody tr').length >= 1, 'Product sales table is empty');
+        console.assert((() => { const rows = [...document.querySelectorAll('#product-sales tbody tr td:last-child')]; const sum = rows.reduce((acc, cell) => acc + parseFloat(cell.textContent), 0); return Math.abs(sum - parseFloat(document.querySelector('#total-sales').textContent)) < 0.01; })(), 'Total sales does not match the sum of the product sales');
+        console.assert(!!document.querySelector('#currency-picker option[value="USD"]'), 'USD option is missing in currency picker');
+        console.assert(!!document.querySelector('#total-currency'), 'Total currency element is missing');
         console.assert(document.querySelector('#region-filter').tagName === 'SELECT', 'Region filter is not a select element');
         console.assert(document.querySelector('#total-sales').dataset.region !== undefined, 'Total sales does not have a data-region attribute');
     </script>
