@@ -11,6 +11,15 @@
     <div class="container mt-5">
         <h1>Sales Summary</h1>
         <div id="total-sales" class="display-4"></div>
+        <table id="product-sales" class="table mt-4">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Total Sales</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <script>
@@ -21,13 +30,26 @@
             .then(data => {
                 const rows = data.split('\n').slice(1);
                 let totalSales = 0;
+                const productSales = {};
+
                 rows.forEach(row => {
                     const columns = row.split(',');
                     if (columns.length > 1) {
-                        totalSales += parseFloat(columns[1]) || 0;
+                        const product = columns[0].trim();
+                        const sales = parseFloat(columns[1]) || 0;
+                        totalSales += sales;
+                        productSales[product] = (productSales[product] || 0) + sales;
                     }
                 });
+
                 document.querySelector('#total-sales').textContent = totalSales.toFixed(2);
+
+                const tbody = document.querySelector('#product-sales tbody');
+                for (const [product, sales] of Object.entries(productSales)) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${product}</td><td>${sales.toFixed(2)}</td>`;
+                    tbody.appendChild(tr);
+                }
             });
     </script>
 </body>
