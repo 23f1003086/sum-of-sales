@@ -1,118 +1,81 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales Summary 42</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Sales Summary sample1</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        #loading {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container">
         <h1>Sales Summary</h1>
-        <div id="total-sales" class="display-4" data-region=""></div>
-        <div id="total-currency" class="display-6">USD</div>
-        <select id="currency-picker" class="form-select mt-3">
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-        </select>
-        <select id="region-filter" class="form-select mt-3">
-            <option value="">All Regions</option>
-            <option value="North America">North America</option>
-            <option value="Europe">Europe</option>
-            <option value="Asia">Asia</option>
-        </select>
-        <table id="product-sales" class="table mt-4">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Total Sales</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <div id="loading">Processing...</div>
+        <div id="total-sales" class="alert alert-info" role="alert"></div>
+        <input type="file" id="file-input" class="form-control" accept=".csv">
+        <button id="upload-button" class="btn btn-primary mt-2">Upload New File</button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.title = 'Sales Summary 42';
+        document.title = 'Sales Summary sample1';
 
-        let totalSales = 0;
-        let exchangeRates = {};
-        let productSales = {};
-
-        fetch('data.csv')
-            .then(response => response.text())
-            .then(data => {
-                const rows = data.split('\n').slice(1);
-
-                rows.forEach(row => {
-                    const columns = row.split(',');
-                    if (columns.length > 2) {
-                        const product = columns[0].trim();
-                        const sales = parseFloat(columns[1]) || 0;
-                        const region = columns[2].trim();
-                        totalSales += sales;
-                        productSales[product] = { sales: (productSales[product]?.sales || 0) + sales, region: region };
-                    }
-                });
-
-                updateTotalSales();
-                populateProductTable();
-            });
-
-        fetch('rates.json')
-            .then(response => response.json())
-            .then(data => {
-                exchangeRates = data;
-                updateCurrency();
-            });
-
-        document.querySelector('#currency-picker').addEventListener('change', updateCurrency);
-        document.querySelector('#region-filter').addEventListener('change', updateTotalSales);
-
-        function updateCurrency() {
-            const selectedCurrency = document.querySelector('#currency-picker').value;
-            const rate = exchangeRates[selectedCurrency] || 1;
-            const convertedTotal = totalSales * rate;
-            document.querySelector('#total-sales').textContent = convertedTotal.toFixed(2);
-            document.querySelector('#total-currency').textContent = selectedCurrency;
-        }
-
-        function updateTotalSales() {
-            const selectedRegion = document.querySelector('#region-filter').value;
-            let filteredTotal = 0;
-
-            for (const [product, data] of Object.entries(productSales)) {
-                if (selectedRegion === "" || data.region === selectedRegion) {
-                    filteredTotal += data.sales;
-                }
-            }
-
-            const selectedCurrency = document.querySelector('#currency-picker').value;
-            const rate = exchangeRates[selectedCurrency] || 1;
-            document.querySelector('#total-sales').textContent = (filteredTotal * rate).toFixed(2);
-            document.querySelector('#total-sales').dataset.region = selectedRegion;
-        }
-
-        function populateProductTable() {
-            const tbody = document.querySelector('#product-sales tbody');
-            tbody.innerHTML = '';
-            for (const [product, data] of Object.entries(productSales)) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${product}</td><td>${data.sales.toFixed(2)}</td>`;
-                tbody.appendChild(tr);
+        async function fetchData() {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const response = await fetch('data.csv');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const text = await response.text();
+                const data = parseCSV(text);
+                const totalSales = calculateTotalSales(data);
+                document.getElementById('total-sales').textContent = `Total Sales: $${totalSales.toFixed(2)}`;
+            } catch (error) {
+                document.getElementById('total-sales').textContent = 'Error loading data';
+                console.error('Error fetching data:', error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // JS checks
-        console.assert(document.querySelectorAll('#product-sales tbody tr').length >= 1, 'Product sales table is empty');
-        console.assert((() => { const rows = [...document.querySelectorAll('#product-sales tbody tr td:last-child')]; const sum = rows.reduce((acc, cell) => acc + parseFloat(cell.textContent), 0); return Math.abs(sum - parseFloat(document.querySelector('#total-sales').textContent)) < 0.01; })(), 'Total sales does not match the sum of the product sales');
-        console.assert(!!document.querySelector('#currency-picker option[value="USD"]'), 'USD option is missing in currency picker');
-        console.assert(!!document.querySelector('#total-currency'), 'Total currency element is missing');
-        console.assert(document.querySelector('#region-filter').tagName === 'SELECT', 'Region filter is not a select element');
-        console.assert(document.querySelector('#total-sales').dataset.region !== undefined, 'Total sales does not have a data-region attribute');
+        function parseCSV(text) {
+            const rows = text.split('\n').map(row => row.split(','));
+            const headers = rows[0];
+            const salesIndex = headers.indexOf('sales');
+            return rows.slice(1).map(row => ({
+                sales: parseFloat(row[salesIndex]) || 0
+            }));
+        }
+
+        function calculateTotalSales(data) {
+            return data.reduce((sum, row) => sum + row.sales, 0);
+        }
+
+        document.getElementById('upload-button').addEventListener('click', () => {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    const data = parseCSV(text);
+                    const totalSales = calculateTotalSales(data);
+                    document.getElementById('total-sales').textContent = `Total Sales: $${totalSales.toFixed(2)}`;
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please select a file first.');
+            }
+        });
+
+        fetchData();
     </script>
 </body>
 </html>
-```
