@@ -1,4 +1,4 @@
-Product,Sales,Region
-Test,100,North
-South,200,South
-Test,15,North
+product,sales,region
+Widget,100,Nort
+Gadget,200,South
+Thingamajig,150,East
